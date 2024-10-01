@@ -1,0 +1,10 @@
+{
+  "id": "docker-env",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://elasticsearch:9200",
+      "enabled": true
+    }
+  ]
+}

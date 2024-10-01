@@ -1,0 +1,20 @@
+services:
+  newman:
+    image: postman/newman
+    volumes:
+      - ./etl_tests.json:/etc/newman/etl_tests.json
+      - ./environment.json:/etc/newman/environment.json
+      - ./reports:/etc/newman/reports/
+    environment:
+      NODE_OPTIONS: --max_old_space_size=4096
+    working_dir: /etc/newman
+    command:
+      run etl_tests.json
+      -e environment.json
+      -r cli,json --reporter-json-export reports/test_results.json
+    networks:
+      - new_admin_panel_sprint_3_default
+
+networks:
+  new_admin_panel_sprint_3_default:
+    external: true
