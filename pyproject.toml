@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "etl"
+version = "0.1.0"
+description = "Packages to run the etl process with postgres, elasticsearch and redis"
+authors = ["Sveta T."]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+python-dotenv = "^1.0.1"
+psycopg = "^3.1.18"
+redis = "^5.0.8"
+black = "^24.4.2"
+elasticsearch = "^8.15.0"
+pydantic = "^2.8.2"
+pydantic-settings = "^2.5.2"
+backoff = "^2.1.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
