@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from redis import Redis, exceptions
 
@@ -21,7 +21,7 @@ class RedisStorage:
             last_modified = self.redis_client.get(self.state_key)
             if last_modified:
                 return datetime.fromisoformat(last_modified.decode("utf-8"))  # noqa
-            return datetime.fromisoformat("1970-01-01T00:00:00+00:00")
+            return datetime.min.replace(tzinfo=timezone.utc)
         except exceptions.ConnectionError as ex:
             logging.exception("Check connection to Redis")
             raise ex

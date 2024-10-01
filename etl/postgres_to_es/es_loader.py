@@ -5,6 +5,7 @@ import elastic_transport
 from elasticsearch import Elasticsearch, helpers
 
 from etl.postgres_to_es.config.es_schema import index_schema
+from etl.postgres_to_es.config.settings import CHUNK_SIZE
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,7 +27,9 @@ class ElasticsearchLoader:
         max_tries=5,
         jitter=backoff.full_jitter,
     )
-    def load_data(self, transformed_data: list[dict], chunk_size: int = 100):
+    def load_data(
+            self, transformed_data: list[dict], chunk_size: int = CHUNK_SIZE
+    ):
         if not self.es.indices.exists(index=self.index_name):
             self.es.indices.create(index=self.index_name, body=index_schema)
         for i in range(0, len(transformed_data), chunk_size):

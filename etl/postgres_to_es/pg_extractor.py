@@ -11,8 +11,14 @@ from etl.postgres_to_es.config.settings import (
     PG_SCHEMA,
     RELATED_PG_TABLES,
     ES_INDEX,
+    CHUNK_SIZE,
 )
 from etl.postgres_to_es.models.models import FilmWorkDto
+from etl.postgres_to_es.queries.sql_queries import (
+    GET_MODIFIED_RECORDS,
+    GET_RELATED_TO_FILM_WORK_IDS,
+    GET_FILM_WORK_DATA,
+)
 
 
 class PostgresExtractor:
@@ -20,6 +26,7 @@ class PostgresExtractor:
     def __init__(self, dsl: dict):
         self.config = dsl
         self.connection = self.connect()
+        self.sequence_size = CHUNK_SIZE
 
     @backoff.on_exception(
         backoff.expo,
@@ -33,19 +40,21 @@ class PostgresExtractor:
     def _fetch_data(self, query: str, params: tuple) -> list[Row]:
         cursor = self.connection.cursor()
         try:
+            rows = []
             cursor.execute(query, params)
-            return cursor.fetchall()
+            while True:
+                _rows = cursor.fetchmany(size=self.sequence_size)
+                if not _rows:
+                    break
+                rows.extend(_rows)
+            return rows
         finally:
             cursor.close()
 
     def get_modified_records(
             self, table: str, last_modified: datetime
     ) -> tuple[list[str], datetime]:
-        query = f"""
-            SELECT id, modified
-            FROM {table}
-            WHERE modified > %s
-        """
+        query = GET_MODIFIED_RECORDS.format(table=table)
         records = self._fetch_data(query, (last_modified,))
         if records:
             return (
@@ -60,56 +69,22 @@ class PostgresExtractor:
             modify_record_ids: list[str],
     ) -> list[str]:
         alias = f"{'g' if table == 'genre' else 'p'}fw"
-        query = f"""
-            SELECT DISTINCT {alias}.film_work_id
-            FROM {PG_SCHEMA}.{table}_film_work {alias}
-            WHERE {alias}.{table}_id = ANY(%s)
-        """
+        query = GET_RELATED_TO_FILM_WORK_IDS.format(
+            alias=alias, schema=PG_SCHEMA, table=table
+        )
         film_ids = self._fetch_data(query, (modify_record_ids,))
         return [str(film_id[0]) for film_id in film_ids]
 
     def get_film_work_data(self, film_ids: list[str]) -> list[dict]:
         connection = self.connect()
         cursor = connection.cursor()
-
-        query = """
-                SELECT 
-                    fw.id,
-                    fw.rating,
-                    fw.title,
-                    fw.description,
-                    fw.modified,
-
-                    COALESCE(array_agg(DISTINCT g.name), ARRAY[]::text[]) AS genres,
-
-                    COALESCE(jsonb_agg(DISTINCT jsonb_build_object('id', p.id, 'full_name', p.full_name))
-                             FILTER (WHERE pfw.role = 'actor'), '[]'::jsonb) AS actors,
-                    COALESCE(jsonb_agg(DISTINCT jsonb_build_object('id', p.id, 'full_name', p.full_name))
-                             FILTER (WHERE pfw.role = 'director'), '[]'::jsonb) AS directors,
-                    COALESCE(jsonb_agg(DISTINCT jsonb_build_object('id', p.id, 'full_name', p.full_name))
-                             FILTER (WHERE pfw.role = 'writer'), '[]'::jsonb) AS writers,
-
-                    COALESCE(array_agg(DISTINCT p.full_name)
-                             FILTER (WHERE pfw.role = 'actor'), ARRAY[]::text[]) AS actors_names,
-                    COALESCE(array_agg(DISTINCT p.full_name)
-                             FILTER (WHERE pfw.role = 'director'), ARRAY[]::text[]) AS directors_names,
-                    COALESCE(array_agg(DISTINCT p.full_name)
-                             FILTER (WHERE pfw.role = 'writer'), ARRAY[]::text[]) AS writers_names
-
-                FROM content.film_work fw
-
-                LEFT JOIN content.genre_film_work gfw ON gfw.film_work_id = fw.id
-                LEFT JOIN content.genre g ON g.id = gfw.genre_id
-                LEFT JOIN content.person_film_work pfw ON pfw.film_work_id = fw.id
-                LEFT JOIN content.person p ON p.id = pfw.person_id
-
-                WHERE fw.id = ANY(%s)
-
-                GROUP BY fw.id;
-                """
-
-        cursor.execute(query, (film_ids,))
-        rows = cursor.fetchall()
+        rows = []
+        cursor.execute(GET_FILM_WORK_DATA, (film_ids,))
+        while True:
+            _rows = cursor.fetchmany(size=self.sequence_size)
+            if not _rows:
+                break
+            rows.extend(_rows)
         columns = [desc[0] for desc in cursor.description]
         film_data = [dict(zip(columns, row)) for row in rows]
         cursor.close()
