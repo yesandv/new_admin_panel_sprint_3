@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PG_DB}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    expose:
+      - "5432"
+    volumes:
+      - ./pg_dump.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${PG_USER} -d ${PG_DB}
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:latest
+    container_name: redis_storage
+    expose:
+      - "6379"
+
+  elasticsearch:
+    image: elasticsearch:8.6.2
+    container_name: elasticsearch_engine
+    expose:
+      - "9200"
+    environment:
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+    depends_on:
+      - postgres
+      - redis
+
+  etl:
+    build:
+      context: .
+      dockerfile: etl/Dockerfile
+    container_name: etl_process
+    env_file:
+      - .env
+    entrypoint: sh -c "python etl/postgres_to_es/main.py"
+    depends_on:
+      - elasticsearch
+    restart: always
+
+volumes:
+  pgdata:
