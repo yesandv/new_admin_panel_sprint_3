@@ -1,25 +1,73 @@
-import os
+from pathlib import Path
 
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
+from etl.postgres_to_es.config import es_schema
+from etl.postgres_to_es.models.models import (
+    FilmWorkDto,
+    GenreDto,
+    PersonDto,
+)
 
-PG_DSL = {
-    "dbname": os.getenv("PG_DB"),
-    "user": os.getenv("PG_USER"),
-    "password": os.getenv("PG_PASSWORD"),
-    "host": os.getenv("PG_HOST", "127.0.0.1"),
-    "port": os.getenv("PG_PORT", 5432),
-}
-PG_SCHEMA = os.getenv("PG_SCHEMA", "public")
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("REDIS_PORT", 6379)
-REDIS_KEY = os.getenv("REDIS_KEY")
 
-ES_URL = os.getenv("ES_URL", "http://localhost:9200")
-ES_INDEX = os.getenv("ES_INDEX")
+class Settings(BaseSettings):
+    pg_db: str
+    pg_user: str
+    pg_password: str
+    pg_host: str
+    pg_port: int
+    pg_schema: str
 
-RELATED_PG_TABLES = ["person", "genre"]
+    es_url: str
+    es_film_index: str
+    es_genre_index: str
+    es_person_index: str
 
-CHUNK_SIZE = 100
+    redis_host: str
+    redis_port: int
+    redis_key: str
+
+    chunk_size: int = 100
+
+    model_config = SettingsConfigDict(
+        env_file=ROOT_DIR / ".env", extra="ignore"
+    )
+
+    @property
+    def pg_dsl(self) -> dict:
+        return {
+            "dbname": self.pg_db,
+            "user": self.pg_user,
+            "password": self.pg_password,
+            "host": self.pg_host,
+            "port": self.pg_port,
+        }
+
+    @property
+    def related_pg_tables(self) -> tuple:
+        return "genre", "person"
+
+    @property
+    def es_indexes(self) -> list[str]:
+        return [self.es_film_index, self.es_genre_index, self.es_person_index]
+
+    @property
+    def es_schema_map(self) -> dict:
+        return {
+            self.es_film_index: es_schema.filmworks,
+            self.es_genre_index: es_schema.genres,
+            self.es_person_index: es_schema.persons,
+        }
+
+    @property
+    def dto_map(self) -> dict:
+        return {
+            self.es_film_index: FilmWorkDto,
+            self.es_genre_index: GenreDto,
+            self.es_person_index: PersonDto,
+        }
+
+
+etl_settings = Settings()

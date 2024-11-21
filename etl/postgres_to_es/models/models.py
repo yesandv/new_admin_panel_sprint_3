@@ -7,6 +7,13 @@ class PersonDto(BaseModel):
     id: str
     name: str = Field(None, alias="full_name")
 
+    @field_validator("id", mode="before")  # noqa
+    @classmethod
+    def turn_uuid_into_str(cls, value):
+        if isinstance(value, UUID):
+            return str(value)
+        return value
+
 
 class FilmWorkDto(BaseModel):
     id: str
@@ -32,3 +39,10 @@ class FilmWorkDto(BaseModel):
 class GenreDto(BaseModel):
     id: str
     name: str
+
+    @field_validator("id", mode="before")  # noqa
+    @classmethod
+    def turn_uuid_into_str(cls, value):
+        if isinstance(value, UUID):
+            return str(value)
+        return value

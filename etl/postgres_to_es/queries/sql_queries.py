@@ -1,5 +1,5 @@
 GET_MODIFIED_RECORDS = """
-    SELECT id, modified
+    SELECT id
     FROM {table}
     WHERE modified > %s
 """
@@ -16,7 +16,6 @@ GET_FILM_WORK_DATA = """
         fw.rating,
         fw.title,
         fw.description,
-        fw.modified,
 
         COALESCE(array_agg(DISTINCT g.name), ARRAY[]::text[]) AS genres,
 
@@ -44,4 +43,19 @@ GET_FILM_WORK_DATA = """
     WHERE fw.id = ANY(%s)
 
     GROUP BY fw.id
+"""
+
+GET_GENRE_DATA = """
+    SELECT
+        id, name
+    FROM content.genre
+    WHERE id = ANY(%s)
+"""
+
+
+GET_PERSON_DATA = """
+    SELECT
+        id, full_name
+    FROM content.person
+    WHERE id = ANY(%s)
 """

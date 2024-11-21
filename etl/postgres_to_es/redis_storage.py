@@ -20,7 +20,9 @@ class RedisStorage:
         try:
             last_modified = self.redis_client.get(self.state_key)
             if last_modified:
-                return datetime.fromisoformat(last_modified.decode("utf-8"))  # noqa
+                return datetime.fromisoformat(
+                    last_modified.decode("utf-8")  # noqa
+                )
             return datetime.min.replace(tzinfo=timezone.utc)
         except exceptions.ConnectionError as ex:
             logging.exception("Check connection to Redis")
