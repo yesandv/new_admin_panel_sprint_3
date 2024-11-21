@@ -27,3 +27,8 @@ class FilmWorkDto(BaseModel):
         if isinstance(value, UUID):
             return str(value)
         return value
+
+
+class GenreDto(BaseModel):
+    id: str
+    name: str
