@@ -1,10 +1,8 @@
-import logging
 from datetime import datetime, timezone
 
 from redis import Redis, exceptions
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from etl.postgres_to_es.config.logger import logger
 
 
 class RedisStorage:
@@ -25,5 +23,5 @@ class RedisStorage:
                 )
             return datetime.min.replace(tzinfo=timezone.utc)
         except exceptions.ConnectionError as ex:
-            logging.exception("Check connection to Redis")
+            logger.exception("Check connection to Redis")
             raise ex

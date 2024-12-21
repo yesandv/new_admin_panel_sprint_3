@@ -1,15 +1,11 @@
-import logging
-
 import backoff
 import psycopg
 from psycopg import InterfaceError
 from psycopg.rows import Row
 
+from etl.postgres_to_es.config.logger import logger
 from etl.postgres_to_es.config.settings import etl_settings
 from etl.postgres_to_es.db.base import BaseConnector
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class PostgresConnector(BaseConnector):
@@ -43,7 +39,7 @@ class PostgresConnector(BaseConnector):
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
         except InterfaceError:
-            logging.exception(
+            logger.exception(
                 "Error occurred while extracting data from the PG DB"
             )
         finally:

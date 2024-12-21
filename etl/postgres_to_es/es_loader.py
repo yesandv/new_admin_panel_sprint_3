@@ -1,13 +1,9 @@
-import logging
-
 import backoff
 import elastic_transport
 from elasticsearch import Elasticsearch, helpers
 
+from etl.postgres_to_es.config.logger import logger
 from etl.postgres_to_es.config.settings import etl_settings
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class ElasticsearchLoader:
@@ -38,4 +34,4 @@ class ElasticsearchLoader:
         for i in range(0, len(transformed_data), chunk_size):
             chunk = transformed_data[i: i + chunk_size]
             helpers.bulk(self.es, chunk)
-            logging.info("Data loaded to Elasticsearch successfully")
+            logger.info("Data loaded to Elasticsearch successfully")

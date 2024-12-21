@@ -1,18 +1,15 @@
 import datetime
-import logging
 import time
 
 import redis
 
+from etl.postgres_to_es.config.logger import logger
 from etl.postgres_to_es.config.settings import etl_settings
 from etl.postgres_to_es.data_transformer import DataTransformer
 from etl.postgres_to_es.db.pg_connector import PostgresConnector
 from etl.postgres_to_es.db.pg_extractor import initialize_extractors
 from etl.postgres_to_es.es_loader import ElasticsearchLoader
 from etl.postgres_to_es.redis_storage import RedisStorage
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def etl_process():
@@ -52,7 +49,7 @@ def etl_process():
             list(filmwork_modified_records)
         )
         if not all([genre_data, person_data, filmwork_data]):
-            logging.info("No data to process. ETL process completed")
+            logger.info("No data to process. ETL process completed")
             time.sleep(20)
             continue
         for index, data in zip(

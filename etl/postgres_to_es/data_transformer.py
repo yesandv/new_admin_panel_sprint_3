@@ -1,11 +1,7 @@
-import logging
-
 from pydantic import ValidationError
 
+from etl.postgres_to_es.config.logger import logger
 from etl.postgres_to_es.config.settings import etl_settings
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class DataTransformer:
@@ -24,7 +20,7 @@ class DataTransformer:
                 }
                 transformed_data.append(es_record)
             except ValidationError:
-                logging.exception(
+                logger.exception(
                     "Validation error for an index '%s' record with the ID '%s'",
                     index,
                     record.get("id"),
